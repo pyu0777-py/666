@@ -52,7 +52,7 @@
         /* === 1. 首页 Hero === */
         #home { 
             position: relative; height: 100vh; display: flex; align-items: center; justify-content: center; 
-            text-align: center; background: linear-gradient(rgba(0,0,0,0.32), rgba(0,0,0,0.32)), url('https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1920&q=80'); 
+            text-align: center; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1920&q=80'); 
             background-size: cover; background-position: center top; color: #fff; padding-top: 80px; 
             animation: bgPan 18s ease-in-out infinite;
         }
@@ -117,6 +117,10 @@
         }
 
         .hero-title { animation: floatUpDown 6s ease-in-out infinite; }
+
+        /* amazon badge in hero */
+        .amazon-badge { position: absolute; right: 20px; bottom: 20px; z-index: 50; display: inline-block; }
+        .amazon-badge svg { display: block; border-radius: 6px; }
         .lightbox-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px;
         }
@@ -212,8 +216,12 @@
         /* === 6. 联系 === */
         #contact { background: #111; color: #fff; text-align: center; }
         .contact-card { display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap; padding: 24px 0 8px; }
-        .contact-avatar { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; border: 3px solid #fff; background: #eee; cursor: pointer; flex: 0 0 96px; }
+        .contact-avatar { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; border: 3px solid #fff; background: #eee; cursor: pointer; flex: 0 0 96px; position: relative; }
         .contact-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        /* place status badge just outside avatar: left-bottom */
+        .contact-status { position: absolute; left: -10px; bottom: -10px; display: flex; align-items: center; gap: 6px; transform: translateZ(0); }
+        .contact-status .dot { width: 12px; height: 12px; border-radius: 50%; background: #28c76f; box-shadow: 0 0 6px rgba(40,199,111,0.6); border: 2px solid #fff; }
+        .contact-status .text { color: #dfffe6; font-size: 0.78rem; font-weight: 700; text-shadow: 0 1px 0 rgba(0,0,0,0.2); }
         .contact-info { text-align: left; color: #fff; }
         .contact-info h3 { margin: 0 0 6px; font-size: 1.1rem; }
         .contact-info p { margin: 2px 0; color: #ddd; font-size: 0.95rem; }
@@ -260,24 +268,18 @@
         }
 
         @media (max-width: 480px) {
-            /* change works list to column-flow grid: each column contains 4 rows */
+            /* mobile: show 3 items per row, smaller cards for denser grid */
             .massive-grid {
                 display: grid;
-                grid-auto-flow: column;
-                grid-template-rows: repeat(4, minmax(0, 1fr));
-                grid-auto-columns: minmax(220px, 260px);
-                gap: 12px;
-                overflow-x: auto;
-                padding-bottom: 12px;
-                -webkit-overflow-scrolling: touch;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
             }
-            .project-card { width: 100%; min-width: 200px; }
-            .project-card { margin-bottom: 6px; }
+            .project-card { width: 100%; }
+            .project-thumb { height: 110px; }
             .hero-title { font-size: 1.6rem; }
             .hero-title .highlight { font-size: 1.05rem; }
             .hero-stats .stat-item h3 { font-size: 1.8rem; }
             .ai-stats { grid-template-columns: 1fr; gap: 18px; }
-            .project-thumb { height: 140px; }
             .chart-preview { height: 220px; padding: 16px; }
             .btn { padding: 14px 28px; font-size: 1rem; }
             .nav-links a { margin-left: 14px; }
@@ -334,6 +336,13 @@
                 <div class="stat-item"><h3 class="count-up" data-target="10">0</h3><p>Amazon Best Sellers</p></div>
                 <div class="stat-item"><h3 class="count-up" data-target="50">0</h3><p>服务跨境品牌</p></div>
                 <div class="stat-item"><h3 class="count-up" data-target="100">0</h3><p>CES 展会全案落地</p></div>
+            </div>
+            <div class="amazon-badge" aria-hidden="true" title="亚马逊"> 
+                <svg width="80" height="36" viewBox="0 0 80 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect x="0" y="0" width="80" height="36" rx="6" fill="#000" />
+                    <path d="M12 18 C26 30, 54 30, 68 18" stroke="#fff" stroke-width="3.8" stroke-linecap="round" fill="none" />
+                    <path d="M62 15 C64 20, 68 22, 72 20" stroke="#fff" stroke-width="3.8" stroke-linecap="round" fill="none"/>
+                </svg>
             </div>
         </div>
     </section>
@@ -587,8 +596,11 @@
             <h2 class="section-title" style="color:#fff;">与我<span class="highlight">联系</span></h2>
             <p class="section-subtitle" style="color:#aaa;">期待与您合作，共同打造下一个跨境爆款品牌。</p>
             <div class="contact-card">
-                <div class="contact-avatar" id="contactAvatarWrap" title="点击更换头像">
-                    <img id="contactAvatar" src="https://placehold.co/200x200/ffffff/333?text=Avatar" alt="头像（点击更换）">
+                <div style="position:relative; display:inline-block;">
+                    <div class="contact-avatar" id="contactAvatarWrap" title="点击更换头像">
+                        <img id="contactAvatar" src="https://placehold.co/200x200/ffffff/333?text=Avatar" alt="头像（点击更换）">
+                    </div>
+                    <div class="contact-status" aria-hidden="true"><span class="dot"></span><span class="text">可任职</span></div>
                 </div>
                 <div class="contact-info">
                     <h3>联系信息</h3>
