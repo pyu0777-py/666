@@ -52,7 +52,7 @@
         /* === 1. 首页 Hero === */
         #home { 
             position: relative; height: 100vh; display: flex; align-items: center; justify-content: center; 
-            text-align: center; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1920&q=80'); 
+            text-align: center; background: linear-gradient(rgba(0,0,0,0.68), rgba(0,0,0,0.68)), url('https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1920&q=80'); 
             background-size: cover; background-position: center top; color: #fff; padding-top: 80px; 
             animation: bgPan 18s ease-in-out infinite;
         }
@@ -121,6 +121,7 @@
         /* amazon badge in hero */
         .amazon-badge { position: absolute; right: 20px; bottom: 20px; z-index: 50; display: inline-block; }
         .amazon-badge svg { display: block; border-radius: 6px; }
+        .amazon-badge img { display: block; width: 80px; height: auto; border-radius: 6px; }
         .lightbox-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px;
         }
@@ -415,11 +416,7 @@
                 <div class="stat-item"><h3 class="count-up" data-target="100">0</h3><p>CES 展会全案落地</p></div>
             </div>
             <div class="amazon-badge" aria-hidden="true" title="亚马逊"> 
-                <svg width="80" height="36" viewBox="0 0 80 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <rect x="0" y="0" width="80" height="36" rx="6" fill="#000" />
-                    <path d="M12 18 C26 30, 54 30, 68 18" stroke="#fff" stroke-width="3.8" stroke-linecap="round" fill="none" />
-                    <path d="M62 15 C64 20, 68 22, 72 20" stroke="#fff" stroke-width="3.8" stroke-linecap="round" fill="none"/>
-                </svg>
+                <img src="/1shouye/1ya.png" alt="" />
             </div>
         </div>
     </section>
