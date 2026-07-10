@@ -363,6 +363,83 @@
             .lightbox-caption { padding: 10px 12px 14px; }
         }
 
+        /* === 瀑布图集 === */
+        .waterfall-btn {
+            padding: 10px 20px;
+            border: 2px solid #ff9900;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #ff9900, #ff6600);
+            color: #000;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+        .waterfall-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,153,0,0.45); }
+        .waterfall-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            z-index: 3000; display: none; flex-direction: column; overflow: hidden;
+        }
+        .waterfall-overlay.active { display: flex; }
+        .waterfall-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 24px; background: #111; border-bottom: 1px solid #2a2a2a; flex-shrink: 0;
+        }
+        .waterfall-header h3 { color: #fff; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.5px; }
+        .waterfall-header h3 span { color: #ff9900; }
+        .waterfall-close {
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 1.2rem;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .waterfall-close:hover { background: rgba(255,153,0,0.25); border-color: #ff9900; color: #ff9900; }
+        .waterfall-scroll { flex: 1; overflow-y: auto; padding: 16px 20px 24px; }
+        .waterfall-masonry { columns: 5 160px; column-gap: 8px; }
+        .waterfall-item {
+            break-inside: avoid; margin-bottom: 8px; border-radius: 10px;
+            overflow: hidden; cursor: pointer; display: block;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .waterfall-item:hover { transform: scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .waterfall-item .color-block {
+            width: 100%; display: flex; align-items: flex-end; padding: 10px 12px; box-sizing: border-box;
+        }
+        .waterfall-item .block-label {
+            color: rgba(255,255,255,0.92); font-size: 0.72rem; font-weight: 600;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.55); overflow: hidden;
+            white-space: nowrap; text-overflow: ellipsis; width: 100%;
+        }
+        .waterfall-item.wf-hidden { display: none; }
+        .waterfall-load-more-wrap { text-align: center; padding: 24px 0 8px; }
+        .waterfall-load-more {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 44px; background: transparent;
+            border: 2px solid rgba(255,153,0,0.7); color: #ff9900;
+            border-radius: 30px; font-size: 0.95rem; font-weight: 700;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .waterfall-load-more:hover {
+            background: #ff9900; color: #000; border-color: #ff9900;
+            box-shadow: 0 6px 20px rgba(255,153,0,0.4);
+        }
+        .waterfall-count { color: #888; font-size: 0.82rem; margin-top: 6px; }
+        @media (max-width: 768px) {
+            .waterfall-masonry { columns: 3 110px; column-gap: 6px; }
+            .waterfall-item { margin-bottom: 6px; border-radius: 8px; }
+            .waterfall-header { padding: 12px 16px; }
+            .waterfall-scroll { padding: 10px 10px 20px; }
+            .waterfall-btn { padding: 5px 10px; font-size: 0.72rem; line-height: 1.05; min-height: 24px; }
+        }
+        @media (max-width: 480px) {
+            .waterfall-masonry { columns: 2 100px; column-gap: 5px; }
+            .waterfall-item { margin-bottom: 5px; }
+        }
+
         /* === 编辑模式提示 === */
         #edit-mode-indicator {
             position: fixed;
@@ -427,6 +504,7 @@
             <h2 class="section-title">电子产品<span class="highlight">作品展示</span></h2>
             <p class="section-subtitle">涵盖亚马逊主图、旗舰店、视频脚本及社媒素材，专注 3C/智能硬件/小家电</p>
             <div class="filter-tabs">
+                <button class="waterfall-btn" type="button" id="waterfallBtn" aria-label="瀑布图集"><span aria-hidden="true">🌊</span> 瀑布图集</button>
                 <button class="filter-btn active" type="button" data-filter="all">全部项目</button>
                 <button class="filter-btn" type="button" data-filter="main">亚马逊主图</button>
                 <button class="filter-btn" type="button" data-filter="aplus">旗舰店/官网</button>
@@ -809,6 +887,21 @@
         </div>
     </div>
 
+    <!-- 瀑布图集浮层 -->
+    <div class="waterfall-overlay" id="waterfallOverlay" role="dialog" aria-modal="true" aria-label="瀑布图集">
+        <div class="waterfall-header">
+            <h3>精选<span>瀑布图集</span></h3>
+            <button class="waterfall-close" id="waterfallClose" aria-label="关闭瀑布图集">×</button>
+        </div>
+        <div class="waterfall-scroll" id="waterfallScroll">
+            <div class="waterfall-masonry" id="waterfallMasonry"></div>
+            <div class="waterfall-load-more-wrap" id="waterfallLoadMoreWrap" style="display:none;">
+                <button class="waterfall-load-more" id="waterfallLoadMore">▼ 点击显示更多</button>
+                <div class="waterfall-count" id="waterfallCount"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // === 平滑滚动 ===
         document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach(anchor => {
@@ -1138,6 +1231,178 @@
                 alert('请手动复制：' + text);
             }
         });
+        // === 瀑布图集 ===
+        (function() {
+            const WF_BATCH = 30;
+
+            const wfData: { color: string; height: number; label: string }[] = [
+                { color: '#ff9900', height: 260, label: '智能手表主图系列' },
+                { color: '#4a90e2', height: 180, label: '降噪耳机旗舰店' },
+                { color: '#2ecc71', height: 320, label: '扫地机器人视觉' },
+                { color: '#9b59b6', height: 200, label: 'TikTok爆款短视频' },
+                { color: '#e74c3c', height: 240, label: '户外储能主图' },
+                { color: '#1abc9c', height: 160, label: '智能摄像头' },
+                { color: '#f39c12', height: 300, label: '按摩枪主图' },
+                { color: '#34495e', height: 220, label: '咖啡机视觉' },
+                { color: '#ff6b6b', height: 180, label: '电吹风主图' },
+                { color: '#6c5ce7', height: 350, label: '蓝牙音箱系列' },
+                { color: '#00b894', height: 200, label: '厨房秤设计' },
+                { color: '#fd79a8', height: 270, label: '美容仪主图' },
+                { color: '#0984e3', height: 150, label: '手机支架' },
+                { color: '#e17055', height: 380, label: '冲牙器主图' },
+                { color: '#55efc4', height: 200, label: '智能插座' },
+                { color: '#74b9ff', height: 240, label: 'LED台灯' },
+                { color: '#a29bfe', height: 160, label: '智能体脂秤' },
+                { color: '#d63031', height: 310, label: '睡眠眼罩系列' },
+                { color: '#00cec9', height: 190, label: 'USB扩展坞' },
+                { color: '#fdcb6e', height: 280, label: '便携风扇' },
+                { color: '#e84393', height: 220, label: '电动牙刷' },
+                { color: '#2d3436', height: 140, label: '迷你投影仪' },
+                { color: '#b2bec3', height: 360, label: '保温杯主图' },
+                { color: '#ff7675', height: 200, label: '卷发器视觉' },
+                { color: '#81ecec', height: 250, label: '扫地机拖地版' },
+                { color: '#6ab04c', height: 180, label: '便携充电器' },
+                { color: '#95a5a6', height: 320, label: '旅行包主图' },
+                { color: '#f9ca24', height: 200, label: '空气炸锅' },
+                { color: '#7f8c8d', height: 260, label: '台灯视觉重构' },
+                { color: '#27ae60', height: 300, label: '空气净化器' },
+                { color: '#8e44ad', height: 180, label: '智能体脂秤升级' },
+                { color: '#1e3799', height: 240, label: '桌面风扇主图' },
+                { color: '#c0392b', height: 200, label: '车载吸尘器' },
+                { color: '#16a085', height: 340, label: '宠物摄像头' },
+                { color: '#d35400', height: 160, label: '电动滑板车' },
+                { color: '#2980b9', height: 290, label: '智能手环Pro' },
+                { color: '#8e44ad', height: 220, label: '便携投影仪' },
+                { color: '#27ae60', height: 180, label: '智能音箱设计' },
+                { color: '#f1c40f', height: 370, label: '无线充电器' },
+                { color: '#2c3e50', height: 200, label: '智能吸尘器' },
+                { color: '#e74c3c', height: 260, label: '智能门锁视觉' },
+                { color: '#3498db', height: 140, label: '旗舰店设计1' },
+                { color: '#1abc9c', height: 310, label: '旗舰店设计2' },
+                { color: '#9b59b6', height: 230, label: '旗舰店设计3' },
+                { color: '#e67e22', height: 200, label: '旗舰店设计4' },
+                { color: '#34495e', height: 280, label: '旗舰店设计5' },
+                { color: '#c0392b', height: 160, label: '户外音箱系列' },
+                { color: '#16a085', height: 240, label: '腕表视觉' },
+                { color: '#8e44ad', height: 350, label: '家用咖啡机' },
+                { color: '#2980b9', height: 200, label: '智能锁系列' },
+                { color: '#27ae60', height: 270, label: '便携充电器2' },
+                { color: '#d35400', height: 190, label: '监控摄像头' },
+                { color: '#7f8c8d', height: 310, label: '扬声器视觉' },
+                { color: '#f1c40f', height: 180, label: '厨房电器系列' },
+                { color: '#e74c3c', height: 240, label: '健康家电' },
+                { color: '#3498db', height: 200, label: '产品拆箱系列' },
+                { color: '#9b59b6', height: 360, label: '使用演示教程' },
+                { color: '#1abc9c', height: 220, label: '测评合集' },
+                { color: '#e67e22', height: 160, label: '创意短片' },
+                { color: '#2c3e50', height: 290, label: '广告短片' },
+                { color: '#c0392b', height: 200, label: '周边商品设计' },
+                { color: '#16a085', height: 250, label: '包装设计' },
+                { color: '#8e44ad', height: 180, label: '手册设计' },
+                { color: '#f39c12', height: 330, label: '促销物料' },
+                { color: '#2980b9', height: 210, label: '社媒素材集' },
+                { color: '#27ae60', height: 170, label: '展会落地设计' },
+                { color: '#d35400', height: 300, label: 'CES展会视觉' },
+                { color: '#7f8c8d', height: 240, label: '品牌VI设计' },
+                { color: '#f1c40f', height: 190, label: '产品详情页' },
+                { color: '#9b59b6', height: 280, label: '站内广告图' },
+                { color: '#16a085', height: 150, label: '站外引流素材' },
+                { color: '#e74c3c', height: 340, label: '亚马逊A+内容' },
+                { color: '#3498db', height: 200, label: '品牌故事版面' },
+                { color: '#c0392b', height: 260, label: '视觉整合方案' },
+                { color: '#00b894', height: 170, label: 'A+模块设计' },
+                { color: '#6c5ce7', height: 230, label: '主图场景合成' },
+            ];
+
+            const waterfallOverlay = document.getElementById('waterfallOverlay');
+            const waterfallClose = document.getElementById('waterfallClose');
+            const waterfallMasonry = document.getElementById('waterfallMasonry');
+            const waterfallLoadMoreWrap = document.getElementById('waterfallLoadMoreWrap');
+            const waterfallLoadMoreBtn = document.getElementById('waterfallLoadMore');
+            const waterfallCountEl = document.getElementById('waterfallCount');
+            const waterfallBtn = document.getElementById('waterfallBtn');
+            let wfLoadedCount = 0;
+
+            function buildWaterfallItem(item: { color: string; height: number; label: string }, index: number): HTMLElement {
+                const div = document.createElement('div');
+                div.className = index >= WF_BATCH ? 'waterfall-item wf-hidden' : 'waterfall-item';
+                div.setAttribute('aria-label', item.label);
+                const block = document.createElement('div');
+                block.className = 'color-block';
+                block.style.cssText = `background:${item.color};height:${item.height}px;`;
+                const label = document.createElement('span');
+                label.className = 'block-label';
+                label.textContent = item.label;
+                block.appendChild(label);
+                div.appendChild(block);
+                return div;
+            }
+
+            function updateLoadMore() {
+                const remaining = wfData.length - wfLoadedCount;
+                if (waterfallLoadMoreBtn) {
+                    (waterfallLoadMoreBtn as HTMLButtonElement).style.display = remaining > 0 ? 'inline-flex' : 'none';
+                }
+                if (waterfallCountEl) {
+                    waterfallCountEl.textContent = remaining > 0
+                        ? `已显示 ${wfLoadedCount} / 共 ${wfData.length} 张`
+                        : `共 ${wfData.length} 张已全部展示`;
+                }
+                if (waterfallLoadMoreWrap) {
+                    waterfallLoadMoreWrap.style.display = 'block';
+                }
+            }
+
+            function initWaterfall() {
+                if (!waterfallMasonry) return;
+                waterfallMasonry.innerHTML = '';
+                wfLoadedCount = 0;
+                wfData.forEach((item, index) => {
+                    waterfallMasonry.appendChild(buildWaterfallItem(item, index));
+                    if (index < WF_BATCH) wfLoadedCount++;
+                });
+                updateLoadMore();
+            }
+
+            function openWaterfall() {
+                initWaterfall();
+                if (waterfallOverlay) {
+                    waterfallOverlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+
+            function closeWaterfall() {
+                if (waterfallOverlay) {
+                    waterfallOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }
+
+            waterfallBtn?.addEventListener('click', openWaterfall);
+            waterfallClose?.addEventListener('click', closeWaterfall);
+            waterfallOverlay?.addEventListener('click', (e) => {
+                if (e.target === waterfallOverlay) closeWaterfall();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && waterfallOverlay?.classList.contains('active')) closeWaterfall();
+            });
+
+            waterfallLoadMoreBtn?.addEventListener('click', () => {
+                if (!waterfallMasonry) return;
+                const hidden = waterfallMasonry.querySelectorAll<HTMLElement>('.waterfall-item.wf-hidden');
+                let shown = 0;
+                hidden.forEach(item => {
+                    if (shown < WF_BATCH) {
+                        item.classList.remove('wf-hidden');
+                        shown++;
+                        wfLoadedCount++;
+                    }
+                });
+                updateLoadMore();
+            });
+        })();
+
     </script>
 </body>
 </html>
