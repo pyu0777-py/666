@@ -913,7 +913,7 @@
                     <p>WeChat: <strong>YIYUANYUYU</strong></p>
                     <p>Email: <a href="mailto:312675265@qq.com" style="color:#fff; text-decoration:underline;">312675265@qq.com</a></p>
                     <div class="contact-actions">
-                        <a href="mailto:312675265@qq.com">发送邮件</a>
+                        <a href="#" id="copyEmail">复制Email</a>
                         <a href="#" id="copyWeChat">复制 WeChat</a>
                     </div>
                 </div>
@@ -1320,15 +1320,32 @@
         mobileCloseBtn?.addEventListener('click', closeMobileNav);
         document.querySelectorAll('.mobile-nav a').forEach(a => a.addEventListener('click', closeMobileNav));
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMobileNav(); });
-        // contact avatar replace & copy wechat
+        // contact avatar replace & copy email/wechat
         const contactAvatar = document.getElementById('contactAvatar') as HTMLImageElement | null;
         const contactAvatarWrap = document.getElementById('contactAvatarWrap');
+        const copyEmailBtn = document.getElementById('copyEmail');
         const copyWeChatBtn = document.getElementById('copyWeChat');
         // load saved avatar
         try {
             const saved = localStorage.getItem('contactAvatarSrc');
             if (saved && contactAvatar) contactAvatar.src = saved;
         } catch (e) { }
+        copyEmailBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const text = '312675265@qq.com';
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => alert('Email 已复制：' + text));
+            } else {
+                const input = document.createElement('input');
+                input.value = text;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                alert('Email 已复制：' + text);
+            }
+        });
+
         contactAvatarWrap?.addEventListener('click', (e) => {
             e.preventDefault();
             const url = prompt('请输入头像图片 URL（以 http/https 开头）：', contactAvatar?.src || '');
