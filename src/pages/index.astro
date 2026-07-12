@@ -348,7 +348,7 @@
         /* === 6. 联系 === */
         #contact { background: #111; color: #fff; text-align: center; }
         .contact-card { display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap; padding: 24px 0 8px; }
-        .contact-avatar { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; border: 3px solid #fff; background: #eee; cursor: pointer; flex: 0 0 96px; position: relative; }
+        .contact-avatar { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; border: 3px solid #fff; background: #eee; cursor: default; flex: 0 0 96px; position: relative; }
         .contact-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
         /* place status badge just outside avatar: left-bottom */
         .contact-status { position: absolute; left: -10px; bottom: -10px; display: flex; align-items: center; gap: 6px; transform: translateZ(0); }
@@ -527,7 +527,7 @@
     <!-- 2. 作品展示 -->
     <section id="works">
         <div class="container">
-            <h2 class="section-title">电子产品<span class="highlight">作品展示</span></h2>
+            <h2 class="section-title">产品<span class="highlight">作品展示</span></h2>
             <p class="section-subtitle">涵盖亚马逊主图、旗舰店、独立站及社媒热点，专注 3C/智能硬件/小家电</p>
             <div class="filter-tabs">
                 <button class="filter-btn active" type="button" data-filter="waterfall">瀑布图集</button>
@@ -903,7 +903,7 @@
             <p class="section-subtitle" style="color:#aaa;">期待与您合作，共同打造下一个跨境爆款产品。</p>
             <div class="contact-card">
                 <div style="position:relative; display:inline-block;">
-                    <div class="contact-avatar" id="contactAvatarWrap" title="点击更换头像">
+                    <div class="contact-avatar" id="contactAvatarWrap">
                         <img id="contactAvatar" src="/tex/toux.jpg" alt="头像">
                     </div>
                     <div class="contact-status" aria-hidden="true"><span class="dot"></span><span class="text">可任职</span></div>
@@ -1322,7 +1322,6 @@
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMobileNav(); });
         // contact avatar replace & copy email/wechat
         const contactAvatar = document.getElementById('contactAvatar') as HTMLImageElement | null;
-        const contactAvatarWrap = document.getElementById('contactAvatarWrap');
         const copyEmailBtn = document.getElementById('copyEmail');
         const copyWeChatBtn = document.getElementById('copyWeChat');
         // load saved avatar
@@ -1346,14 +1345,6 @@
             }
         });
 
-        contactAvatarWrap?.addEventListener('click', (e) => {
-            e.preventDefault();
-            const url = prompt('请输入头像图片 URL（以 http/https 开头）：', contactAvatar?.src || '');
-            if (url && contactAvatar) {
-                contactAvatar.src = url;
-                try { localStorage.setItem('contactAvatarSrc', url); } catch (err) { }
-            }
-        });
         copyWeChatBtn?.addEventListener('click', (e) => {
             e.preventDefault();
             const text = 'YIYUANYUYU';
