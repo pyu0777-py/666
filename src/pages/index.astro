@@ -1,4 +1,4 @@
-﻿---
+---
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -12,20 +12,21 @@ type MainProjectCard = {
 
 const publicRoot = path.resolve(process.cwd(), 'public');
 const mainProjectsRoot = path.join(publicRoot, '2c', '2y');
+const aplusProjectsRoot = path.join(publicRoot, '2c', '3q');
 const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
 
 function toPublicUrl(absolutePath: string) {
     return encodeURI('/' + path.relative(publicRoot, absolutePath).split(path.sep).join('/'));
 }
 
-async function loadMainProjectCards(): Promise<MainProjectCard[]> {
-    const monthEntries = await fs.readdir(mainProjectsRoot, { withFileTypes: true });
+async function loadProjectCards(rootPath: string): Promise<MainProjectCard[]> {
+    const monthEntries = await fs.readdir(rootPath, { withFileTypes: true });
     const projectFolders: Array<{ folderName: string; folderPath: string }> = [];
 
     for (const monthEntry of monthEntries) {
         if (!monthEntry.isDirectory()) continue;
 
-        const monthPath = path.join(mainProjectsRoot, monthEntry.name);
+        const monthPath = path.join(rootPath, monthEntry.name);
         const folderEntries = await fs.readdir(monthPath, { withFileTypes: true });
 
         for (const folderEntry of folderEntries) {
@@ -64,7 +65,8 @@ async function loadMainProjectCards(): Promise<MainProjectCard[]> {
         .sort((left, right) => right.sortTime - left.sortTime || left.folderName.localeCompare(right.folderName, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }));
 }
 
-const mainProjectCards = await loadMainProjectCards();
+const mainProjectCards = await loadProjectCards(mainProjectsRoot);
+const aplusProjectCards = await loadProjectCards(aplusProjectsRoot);
 ---
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -685,62 +687,13 @@ const mainProjectCards = await loadMainProjectCards();
                         <div class="project-gallery"></div>
                     </div>
                 ))}
-                <div class="project-card" data-type="aplus" data-images='["https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80","https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=600&q=80"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/333/fff?text=Earbuds+Flagship" alt="旗舰店"></div>
-                    <div class="project-info"><h4>降噪耳机 - 旗舰店</h4><span>旗舰店 / 转化率 +25%</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <!-- 额外的旗舰店/官网内容（新增 10 条） -->
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/222/fff?text=Flagship+1"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/222/fff?text=Flagship+1" alt="旗舰店1"></div>
-                    <div class="project-info"><h4>智能耳机 - 旗舰店/官网</h4><span>旗舰店/官网 / 转化率提升</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/333/fff?text=Flagship+2"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/333/fff?text=Flagship+2" alt="旗舰店2"></div>
-                    <div class="project-info"><h4>户外音箱 - 旗舰店/官网</h4><span>旗舰店/官网 / 品牌页重做</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/444/fff?text=Flagship+3"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/444/fff?text=Flagship+3" alt="旗舰店3"></div>
-                    <div class="project-info"><h4>腕表 - 旗舰店/官网</h4><span>旗舰店/官网 / 页面视觉优化</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/555/fff?text=Flagship+4"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/555/fff?text=Flagship+4" alt="旗舰店4"></div>
-                    <div class="project-info"><h4>家用咖啡机 - 旗舰店/官网</h4><span>旗舰店/官网 / 视觉统一</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/666/fff?text=Flagship+5"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/666/fff?text=Flagship+5" alt="旗舰店5"></div>
-                    <div class="project-info"><h4>智能锁 - 旗舰店/官网</h4><span>旗舰店/官网 / 转化率优化</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/777/fff?text=Flagship+6"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/777/fff?text=Flagship+6" alt="旗舰店6"></div>
-                    <div class="project-info"><h4>便携充电器 - 旗舰店/官网</h4><span>旗舰店/官网 / 产品页重构</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/888/fff?text=Flagship+7"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/888/fff?text=Flagship+7" alt="旗舰店7"></div>
-                    <div class="project-info"><h4>摄像头 - 旗舰店/官网</h4><span>旗舰店/官网 / 品牌页优化</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/999/fff?text=Flagship+8"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/999/fff?text=Flagship+8" alt="旗舰店8"></div>
-                    <div class="project-info"><h4>扬声器 - 旗舰店/官网</h4><span>旗舰店/官网 / 转化率提升</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/aaa/fff?text=Flagship+9"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/aaa/fff?text=Flagship+9" alt="旗舰店9"></div>
-                    <div class="project-info"><h4>厨房电器 - 旗舰店/官网</h4><span>旗舰店/官网 / 页面迭代</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
-                <div class="project-card" data-type="aplus" data-images='["https://placehold.co/400x300/bbb/fff?text=Flagship+10"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/bbb/fff?text=Flagship+10" alt="旗舰店10"></div>
-                    <div class="project-info"><h4>健康家电 - 旗舰店/官网</h4><span>旗舰店/官网 / 品牌页优化</span><div class="gallery-hint">点击查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
+                {aplusProjectCards.map((card) => (
+                    <div class="project-card" data-type="aplus" data-source="directory" data-images={JSON.stringify(card.images)}>
+                        <div class="project-thumb"><img src={card.coverSrc} alt={`${card.folderName} 封面图`}></div>
+                        <div class="project-info"><h4>{card.folderName}</h4><span>旗舰店/官网 / {card.imageCount} 张素材</span><div class="gallery-hint">点击查看更多</div></div>
+                        <div class="project-gallery"></div>
+                    </div>
+                ))}
                 <div class="project-card" data-type="video" data-images='["https://images.unsplash.com/photo-1495707902641-75cac588d2e9?auto=format&fit=crop&w=600&q=80","https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"]'>
                     <div class="project-thumb"><img src="https://placehold.co/400x300/9b59b6/fff?text=TikTok+Video" alt="社媒视频"></div>
                     <div class="project-info"><h4>户外储能 - TikTok 爆款</h4><span>社媒视频 / 播放 50W+</span><div class="gallery-hint">点击查看更多</div></div>
