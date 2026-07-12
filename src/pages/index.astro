@@ -11,7 +11,7 @@ type MainProjectCard = {
 };
 
 const publicRoot = path.resolve(process.cwd(), 'public');
-const mainProjectsDir = path.join(publicRoot, '2c', '3y', '201807月效果图');
+const mainProjectsRoot = path.join(publicRoot, '2c', '3y');
 const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
 
 function toPublicUrl(absolutePath: string) {
@@ -19,31 +19,44 @@ function toPublicUrl(absolutePath: string) {
 }
 
 async function loadMainProjectCards(): Promise<MainProjectCard[]> {
-    const folderEntries = await fs.readdir(mainProjectsDir, { withFileTypes: true });
+    const monthEntries = await fs.readdir(mainProjectsRoot, { withFileTypes: true });
+    const projectFolders: Array<{ folderName: string; folderPath: string }> = [];
+
+    for (const monthEntry of monthEntries) {
+        if (!monthEntry.isDirectory()) continue;
+
+        const monthPath = path.join(mainProjectsRoot, monthEntry.name);
+        const folderEntries = await fs.readdir(monthPath, { withFileTypes: true });
+
+        for (const folderEntry of folderEntries) {
+            if (!folderEntry.isDirectory()) continue;
+            projectFolders.push({
+                folderName: folderEntry.name,
+                folderPath: path.join(monthPath, folderEntry.name),
+            });
+        }
+    }
+
     const projectCards = await Promise.all(
-        folderEntries
-            .filter((entry) => entry.isDirectory())
-            .map(async (folderEntry) => {
-                const folderName = folderEntry.name;
-                const folderPath = path.join(mainProjectsDir, folderName);
-                const fileEntries = await fs.readdir(folderPath, { withFileTypes: true });
-                const images = fileEntries
-                    .filter((entry) => entry.isFile())
-                    .map((entry) => entry.name)
-                    .filter((fileName) => imageExtensions.has(path.extname(fileName).toLowerCase()))
-                    .sort((left, right) => left.localeCompare(right, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }))
-                    .map((fileName) => toPublicUrl(path.join(folderPath, fileName)));
+        projectFolders.map(async ({ folderName, folderPath }) => {
+            const fileEntries = await fs.readdir(folderPath, { withFileTypes: true });
+            const images = fileEntries
+                .filter((entry) => entry.isFile())
+                .map((entry) => entry.name)
+                .filter((fileName) => imageExtensions.has(path.extname(fileName).toLowerCase()))
+                .sort((left, right) => left.localeCompare(right, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }))
+                .map((fileName) => toPublicUrl(path.join(folderPath, fileName)));
 
-                if (!images.length) return null;
+            if (!images.length) return null;
 
-                return {
-                    folderName,
-                    coverSrc: images[0],
-                    images,
-                    imageCount: images.length,
-                    sortTime: (await fs.stat(folderPath)).mtimeMs,
-                } satisfies MainProjectCard;
-            })
+            return {
+                folderName,
+                coverSrc: images[0],
+                images,
+                imageCount: images.length,
+                sortTime: (await fs.stat(folderPath)).mtimeMs,
+            } satisfies MainProjectCard;
+        })
     );
 
     return projectCards
