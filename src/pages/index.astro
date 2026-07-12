@@ -7,6 +7,7 @@ type MainProjectCard = {
     coverSrc: string;
     images: string[];
     imageCount: number;
+    sortTime: number;
 };
 
 const publicRoot = path.resolve(process.cwd(), 'public');
@@ -40,13 +41,14 @@ async function loadMainProjectCards(): Promise<MainProjectCard[]> {
                     coverSrc: images[0],
                     images,
                     imageCount: images.length,
+                    sortTime: (await fs.stat(folderPath)).mtimeMs,
                 } satisfies MainProjectCard;
             })
     );
 
     return projectCards
         .filter((card): card is MainProjectCard => Boolean(card))
-        .sort((left, right) => left.folderName.localeCompare(right.folderName, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }));
+        .sort((left, right) => right.sortTime - left.sortTime || left.folderName.localeCompare(right.folderName, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }));
 }
 
 const mainProjectCards = await loadMainProjectCards();
@@ -127,6 +129,7 @@ const mainProjectCards = await loadMainProjectCards();
         }
         .filter-btn:hover { background: #fff5e6; border-color: #ff9900; color: #ff9900; transform: translateY(-2px); }
         .filter-btn.active { background: #ff9900; border-color: #ff9900; color: #000; box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3); }
+        #works .filter-btn[data-filter="all"] { display: none !important; }
 
         .waterfall-panel {
             display: none;
@@ -268,42 +271,39 @@ const mainProjectCards = await loadMainProjectCards();
             .filter-btn:hover, .filter-btn:active, .filter-btn:focus-visible { transform: none; }
             .massive-grid {
                 display: grid;
-                grid-auto-flow: column;
-                grid-template-rows: repeat(6, minmax(0, auto));
-                grid-auto-columns: minmax(132px, 1fr);
-                gap: 8px;
-                overflow-x: auto;
-                overflow-y: hidden;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                overflow: visible;
                 padding: 2px 2px 8px;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: thin;
-                scrollbar-color: rgba(255,153,0,0.55) transparent;
-                transform: rotateX(180deg);
+                transform: none;
             }
             #works .massive-grid > .project-card {
-                width: 132px;
-                min-width: 132px;
-                max-width: 132px;
-                height: 240px;
+                width: 100%;
+                min-width: 0;
+                max-width: none;
+                height: auto;
+                aspect-ratio: 2 / 3;
+                display: flex;
+                flex-direction: column;
                 border-radius: 10px;
-                transform: rotateX(180deg);
+                transform: none;
             }
-            #works .project-thumb, #works .project-gallery-preview .main-preview { aspect-ratio: 3 / 2; height: auto; }
+            #works .project-thumb { flex: 1 1 auto; min-height: 0; }
+            #works .project-thumb, #works .project-gallery-preview .main-preview { aspect-ratio: auto; height: auto; }
+            #works .project-thumb img { height: 100%; object-fit: cover; }
             .project-gallery { padding: 0 8px 8px; }
-            .project-info { padding: 10px; }
+            .project-info { padding: 8px; }
             .project-info h4 { font-size: 0.86rem; margin-bottom: 4px; line-height: 1.2; }
-            .project-info span, .project-card .gallery-hint { font-size: 0.68rem; }
+            .project-info span, .project-card .gallery-hint { font-size: 0.64rem; }
             .project-gallery { padding: 0 10px 10px; }
-            .project-card .gallery-hint { font-size: 0.65rem; }
-            .massive-grid::-webkit-scrollbar { height: 8px; }
-            .massive-grid::-webkit-scrollbar-thumb { background: rgba(255,153,0,0.55); border-radius: 8px; }
-            .massive-grid-wrap::after { content: '横向查看更多'; position: absolute; left: 50%; top: 6px; transform: translateX(-50%); background: rgba(255,255,255,0.94); color: #666; padding: 4px 8px; font-size: 0.72rem; border-radius: 999px; pointer-events: none; }
+            .project-card .gallery-hint { font-size: 0.62rem; }
+            .massive-grid-wrap::after { content: none; }
             .waterfall-grid { column-count: 3; }
             .contact-status { bottom: -18px; }
-            .scroll-btn { display: flex; align-items: center; justify-content: center; position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; z-index: 60; }
+            .scroll-btn { display: none; align-items: center; justify-content: center; position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; z-index: 60; }
             .scroll-btn.prev { left: 6px; }
             .scroll-btn.next { right: 6px; }
-            .page-dots { position: absolute; left: 50%; transform: translateX(-50%); bottom: 6px; display: flex; gap: 6px; z-index: 60; }
+            .page-dots { position: absolute; left: 50%; transform: translateX(-50%); bottom: 6px; display: none; gap: 6px; z-index: 60; }
             .page-dots .dot { width: 8px; height: 8px; background: rgba(255,255,255,0.5); border-radius: 50%; border: none; padding: 0; }
             .page-dots .dot.active { background: #ff9900; }
         }
@@ -461,11 +461,11 @@ const mainProjectCards = await loadMainProjectCards();
             .massive-grid {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 8px;
+                gap: 10px;
             }
             .waterfall-grid { column-count: 2; }
             .project-card { width: 100%; }
-            .project-thumb { height: 88px; }
+            .project-thumb { height: auto; aspect-ratio: auto; }
             .project-info { padding: 8px; }
             .project-info h4 { font-size: 0.8rem; }
             .project-info span { font-size: 0.64rem; }
@@ -587,7 +587,6 @@ const mainProjectCards = await loadMainProjectCards();
             <p class="section-subtitle">涵盖亚马逊主图、旗舰店、独立站及社媒热点，专注 3C/智能硬件/小家电</p>
             <div class="filter-tabs">
                 <button class="filter-btn active" type="button" data-filter="waterfall">瀑布图集</button>
-                <button class="filter-btn" type="button" data-filter="all">全部项目</button>
                 <button class="filter-btn" type="button" data-filter="main">亚马逊主图</button>
                 <button class="filter-btn" type="button" data-filter="aplus">旗舰店/官网</button>
                 <button class="filter-btn" type="button" data-filter="video">社媒/视频</button>
@@ -1105,6 +1104,7 @@ const mainProjectCards = await loadMainProjectCards();
         const methodChart = document.getElementById('methodChart');
         let currentLightboxImages: string[] = [];
         let currentLightboxIndex = 0;
+        let previousBodyOverflow = '';
 
         function openLightbox(images: string[], index = 0) {
             if (!overlay || !lightboxGallery || !lightboxCaption) return;
@@ -1116,6 +1116,8 @@ const mainProjectCards = await loadMainProjectCards();
             const scrollArea = lightboxGallery.parentElement as HTMLElement | null;
             lightboxCaption.textContent = images.length > 1 ? `共 ${images.length} 张，向下滚动查看` : '作品大图';
             overlay.classList.add('active');
+            previousBodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
             requestAnimationFrame(() => {
                 const targetImage = lightboxGallery.querySelectorAll<HTMLImageElement>('img')[currentLightboxIndex];
                 targetImage?.scrollIntoView({ behavior: 'auto', block: 'start' });
@@ -1125,6 +1127,7 @@ const mainProjectCards = await loadMainProjectCards();
 
         function closeLightbox() {
             if (overlay) overlay.classList.remove('active');
+            document.body.style.overflow = previousBodyOverflow;
         }
 
         function openMethodologyLightbox() {
