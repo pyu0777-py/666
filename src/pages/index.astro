@@ -1,4 +1,57 @@
-﻿<!DOCTYPE html>
+﻿---
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+type MainProjectCard = {
+    folderName: string;
+    coverSrc: string;
+    images: string[];
+    imageCount: number;
+};
+
+const publicRoot = path.resolve(process.cwd(), 'public');
+const mainProjectsDir = path.join(publicRoot, '2c', '3y', '201807月效果图');
+const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
+
+function toPublicUrl(absolutePath: string) {
+    return encodeURI('/' + path.relative(publicRoot, absolutePath).split(path.sep).join('/'));
+}
+
+async function loadMainProjectCards(): Promise<MainProjectCard[]> {
+    const folderEntries = await fs.readdir(mainProjectsDir, { withFileTypes: true });
+    const projectCards = await Promise.all(
+        folderEntries
+            .filter((entry) => entry.isDirectory())
+            .map(async (folderEntry) => {
+                const folderName = folderEntry.name;
+                const folderPath = path.join(mainProjectsDir, folderName);
+                const fileEntries = await fs.readdir(folderPath, { withFileTypes: true });
+                const images = fileEntries
+                    .filter((entry) => entry.isFile())
+                    .map((entry) => entry.name)
+                    .filter((fileName) => imageExtensions.has(path.extname(fileName).toLowerCase()))
+                    .sort((left, right) => left.localeCompare(right, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }))
+                    .map((fileName) => toPublicUrl(path.join(folderPath, fileName)));
+
+                if (!images.length) return null;
+
+                return {
+                    folderName,
+                    coverSrc: images[0],
+                    images,
+                    imageCount: images.length,
+                } satisfies MainProjectCard;
+            })
+    );
+
+    return projectCards
+        .filter((card): card is MainProjectCard => Boolean(card))
+        .sort((left, right) => left.folderName.localeCompare(right.folderName, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }));
+}
+
+const mainProjectCards = await loadMainProjectCards();
+---
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -547,11 +600,13 @@
             <div class="massive-grid-wrap" id="workGridWrap">
                 <button class="scroll-btn prev" aria-label="上一页">‹</button>
                 <div class="massive-grid" id="workGrid">
-                <div class="project-card" data-type="main" data-images='["https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80","https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=600&q=80","https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/ff9900/fff?text=Smart+Watch+Main" alt="智能手表主图"></div>
-                    <div class="project-info"><h4>智能手表 - 类目 #1</h4><span>亚马逊主图 / 卖点可视化</span><div class="gallery-hint">点击下方图查看更多</div></div>
-                    <div class="project-gallery"></div>
-                </div>
+                {mainProjectCards.map((card) => (
+                    <div class="project-card" data-type="main" data-source="directory" data-images={JSON.stringify(card.images)}>
+                        <div class="project-thumb"><img src={card.coverSrc} alt={`${card.folderName} 封面图`}></div>
+                        <div class="project-info"><h4>{card.folderName}</h4><span>亚马逊主图 / {card.imageCount} 张素材</span><div class="gallery-hint">点击下方图查看更多</div></div>
+                        <div class="project-gallery"></div>
+                    </div>
+                ))}
                 <div class="project-card" data-type="aplus" data-images='["https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80","https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=600&q=80"]'>
                     <div class="project-thumb"><img src="https://placehold.co/400x300/333/fff?text=Earbuds+Flagship" alt="旗舰店"></div>
                     <div class="project-info"><h4>降噪耳机 - 旗舰店</h4><span>旗舰店 / 转化率 +25%</span><div class="gallery-hint">点击下方图查看更多</div></div>
@@ -1013,7 +1068,8 @@
             setWaterfallMode(false);
 
             cards.forEach(card => {
-                if (type === 'all' || card.dataset.type === type) {
+                const isDirectoryMainCard = card.dataset.type === 'main' && card.dataset.source === 'directory';
+                if (type === 'all' || (type === 'main' && isDirectoryMainCard) || (type !== 'main' && card.dataset.type === type)) {
                     card.style.display = 'block';
                 } else {
                     card.style.display = 'none';
@@ -1094,36 +1150,14 @@
             ];
             const customImages = JSON.parse(card.dataset.images || '[]') as string[];
             const sourceImages = customImages.length ? customImages : baseImages;
-            return Array.from({ length: 25 }, (_, index) => `${sourceImages[index % sourceImages.length]}&sig=${index}`);
+            return Array.from({ length: sourceImages.length }, (_, index) => sourceImages[index]);
         }
 
         document.querySelectorAll<HTMLElement>('.project-card').forEach(card => {
             card.addEventListener('click', () => {
-                const isExpanded = card.classList.contains('expanded');
-                document.querySelectorAll<HTMLElement>('.project-card').forEach(otherCard => {
-                    otherCard.classList.remove('expanded');
-                    const gallery = otherCard.querySelector<HTMLElement>('.project-gallery');
-                    if (gallery) gallery.innerHTML = '';
-                });
-
-                if (!isExpanded) {
-                    card.classList.add('expanded');
-                    const images = getProjectGalleryImages(card);
-                    const gallery = card.querySelector<HTMLElement>('.project-gallery');
-                    if (gallery && images.length) {
-                        const previewImage = images[0];
-                        gallery.innerHTML = `
-                            <div class="project-gallery-preview compact-preview">
-                                <div class="main-preview"><img src="${previewImage}" alt="作品主图"></div>
-                            </div>
-                        `;
-                        gallery.querySelectorAll<HTMLImageElement>('img').forEach((img, index) => {
-                            img.addEventListener('click', (event) => {
-                                event.stopPropagation();
-                                openLightbox(images, index);
-                            });
-                        });
-                    }
+                const images = getProjectGalleryImages(card);
+                if (images.length) {
+                    openLightbox(images, 0);
                 }
             });
         });
@@ -1142,8 +1176,8 @@
                     const images = JSON.parse(item.dataset.images || '[]') as string[];
                     const gallery = item.querySelector<HTMLElement>('.rank-gallery');
                     if (gallery && images.length) {
-                        const displayImages = Array.from({ length: 25 }, (_, index) => `${images[index % images.length]}&sig=${index}`);
-                        gallery.innerHTML = displayImages.slice(0, 10).map((src, index) => {
+                        const displayImages = Array.from({ length: 25 }, (_, index: number) => `${images[index % images.length]}&sig=${index}`);
+                        gallery.innerHTML = displayImages.slice(0, 10).map((src, index: number) => {
                             if (index === 9) {
                                 return `<div class="gallery-more">+${displayImages.length - 9} 张</div>`;
                             }
@@ -1194,14 +1228,15 @@
 
         // === 移动端横向翻页/分页控制（仅在窄屏可见） ===
         (function() {
-            const workGrid = document.getElementById('workGrid');
-            if (!workGrid) return;
+            const workGridElement = document.getElementById('workGrid');
+            if (!(workGridElement instanceof HTMLElement)) return;
+            const workGrid = workGridElement!;
             const wrap = workGrid.parentElement;
             const prevBtn = wrap?.querySelector('.scroll-btn.prev');
             const nextBtn = wrap?.querySelector('.scroll-btn.next');
             const dotsWrap = wrap?.querySelector('.page-dots');
 
-            function getPages() {
+            function getPages(): number {
                 const pageWidth = workGrid.clientWidth || window.innerWidth;
                 return Math.max(1, Math.ceil(workGrid.scrollWidth / pageWidth));
             }
@@ -1219,7 +1254,7 @@
                 }
             }
 
-            function scrollToPage(index) {
+            function scrollToPage(index: number) {
                 const left = (workGrid.clientWidth || window.innerWidth) * index;
                 workGrid.scrollTo({ left, behavior: 'smooth' });
             }
@@ -1227,8 +1262,8 @@
             prevBtn?.addEventListener('click', () => { scrollToPage(Math.max(0, Math.round(workGrid.scrollLeft / workGrid.clientWidth) - 1)); });
             nextBtn?.addEventListener('click', () => { scrollToPage(Math.min(getPages() - 1, Math.round(workGrid.scrollLeft / workGrid.clientWidth) + 1)); });
             dotsWrap?.addEventListener('click', (e) => {
-                const t = e.target;
-                if (t && t.dataset && t.dataset.index) scrollToPage(Number(t.dataset.index));
+                const target = e.target;
+                if (target instanceof HTMLElement && target.dataset.index) scrollToPage(Number(target.dataset.index));
             });
 
             workGrid.addEventListener('scroll', () => { requestAnimationFrame(updateDots); });
