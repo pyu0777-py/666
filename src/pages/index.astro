@@ -530,6 +530,8 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
             #works .project-thumb video { height: 100%; object-fit: cover; }
             #works .massive-grid.mobile-main-scroll .project-thumb { aspect-ratio: 2 / 1; }
             #works .massive-grid.mobile-main-scroll > .project-card { aspect-ratio: 4 / 5; }
+            #works .massive-grid.mobile-main-scroll .project-thumb { flex: 0 0 auto; }
+            #works .massive-grid.mobile-main-scroll .project-info { flex: 1 1 auto; min-height: 0; overflow: hidden; }
             .project-gallery { padding: 0 8px 8px; }
             .project-info { padding: 8px; }
             .project-info h4 { font-size: 0.86rem; margin-bottom: 4px; line-height: 1.2; }
@@ -710,6 +712,7 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
                 flex-direction: column;
                 scroll-snap-align: start;
                 aspect-ratio: 4 / 5;
+                height: 100%;
                 overflow: hidden;
             }
             .massive-grid.mobile-main-scroll .project-thumb {
@@ -1416,7 +1419,7 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
 
             if (!isDesktopViewport() || currentFilter !== 'main') {
                 visibleMainCards.forEach((card) => {
-                    card.style.display = 'block';
+                    card.style.removeProperty('display');
                 });
                 if (workPagination) workPagination.hidden = true;
                 return;
@@ -1428,7 +1431,11 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
             const end = start + mainCardsPerPage;
 
             visibleMainCards.forEach((card, index) => {
-                card.style.display = index >= start && index < end ? 'block' : 'none';
+                if (index >= start && index < end) {
+                    card.style.removeProperty('display');
+                } else {
+                    card.style.display = 'none';
+                }
             });
 
             if (workPagination) {
@@ -1475,7 +1482,7 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
             cards.forEach(card => {
                 const isDirectoryMainCard = card.dataset.type === 'main' && card.dataset.source === 'directory';
                 if (type === 'all' || (type === 'main' && isDirectoryMainCard) || (type !== 'main' && card.dataset.type === type)) {
-                    card.style.display = 'block';
+                    card.style.removeProperty('display');
                 } else {
                     card.style.display = 'none';
                 }
