@@ -22,6 +22,7 @@ type WaterfallImage = {
 const publicRoot = path.resolve(process.cwd(), 'public');
 const mainProjectsRoot = path.join(publicRoot, '2c', '2y');
 const aplusProjectsRoot = path.join(publicRoot, '2c', '3q');
+const brandProjectsRoot = path.join(publicRoot, '2c', '5p');
 const packagingProjectsRoot = path.join(publicRoot, '2c', '6b');
 const cesProjectsRoot = path.join(publicRoot, '2c', '7x');
 const otherProjectsRoot = path.join(publicRoot, '2c', '8q');
@@ -152,6 +153,7 @@ async function loadWaterfallImages(rootPath: string): Promise<WaterfallImage[]> 
 
 const mainProjectCards = await loadProjectCards(mainProjectsRoot);
 const aplusProjectCards = await loadProjectCards(aplusProjectsRoot);
+const brandProjectCards = await loadProjectCards(brandProjectsRoot);
 const packagingProjectCards = await loadProjectCards(packagingProjectsRoot);
 const cesProjectCards = await loadProjectCards(cesProjectsRoot);
 const otherProjectCards = await loadProjectCards(otherProjectsRoot);
@@ -860,6 +862,24 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
                     <div class="project-info"><h4>广告短片 - 转化优化</h4><span>社媒/视频 / 广告</span><div class="gallery-hint">点击查看更多</div></div>
                     <div class="project-gallery"></div>
                 </div>
+                {brandProjectCards.map((card) => (
+                    <div class="project-card" data-type="brand" data-source="directory" data-images={JSON.stringify(card.images)} data-videos={JSON.stringify(card.videos)}>
+                        <div class="project-thumb">
+                            {card.previewVideoSrc ? (
+                                <>
+                                    <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster={card.images[0] || undefined} aria-label={`${card.folderName} 品牌全案视频预览`}>
+                                        <source src={card.previewVideoSrc} type={card.previewVideoMime || 'video/mp4'} />
+                                    </video>
+                                    {card.images[0] && <img class="video-fallback-image" src={card.images[0]} alt={`${card.folderName} 封面图`} loading="lazy" decoding="async" />}
+                                </>
+                            ) : (
+                                <img src={card.coverSrc} alt={`${card.folderName} 封面图`} />
+                            )}
+                        </div>
+                        <div class="project-info"><h4>{card.folderName}</h4><span>品牌全案 / {card.imageCount} 张素材</span><div class="gallery-hint">点击查看更多</div></div>
+                        <div class="project-gallery"></div>
+                    </div>
+                ))}
                 {packagingProjectCards.map((card) => (
                     <div class="project-card" data-type="packaging" data-source="directory" data-images={JSON.stringify(card.images)} data-videos={JSON.stringify(card.videos)}>
                         <div class="project-thumb">
@@ -887,7 +907,18 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
                 ))}
                 {otherProjectCards.map((card) => (
                     <div class="project-card" data-type="other" data-source="directory" data-images={JSON.stringify(card.images)} data-videos={JSON.stringify(card.videos)}>
-                        <div class="project-thumb"><img src={card.coverSrc} alt={`${card.folderName} 封面图`}></div>
+                        <div class="project-thumb">
+                            {card.previewVideoSrc ? (
+                                <>
+                                    <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster={card.images[0] || undefined} aria-label={`${card.folderName} 其他栏目视频预览`}>
+                                        <source src={card.previewVideoSrc} type={card.previewVideoMime || 'video/mp4'} />
+                                    </video>
+                                    {card.images[0] && <img class="video-fallback-image" src={card.images[0]} alt={`${card.folderName} 封面图`} loading="lazy" decoding="async" />}
+                                </>
+                            ) : (
+                                <img src={card.coverSrc} alt={`${card.folderName} 封面图`} />
+                            )}
+                        </div>
                         <div class="project-info"><h4>{card.folderName}</h4><span>其他 / {card.imageCount} 张素材</span><div class="gallery-hint">点击查看更多</div></div>
                         <div class="project-gallery"></div>
                     </div>
