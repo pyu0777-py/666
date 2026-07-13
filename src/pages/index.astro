@@ -1462,23 +1462,55 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
                 thumb.classList.remove('video-error');
             };
 
+            const tryPlayPreview = () => {
+                video.play().then(() => {
+                    hideFallback();
+                }).catch(() => {
+                    // Mobile browsers may delay autoplay until the video is visible.
+                });
+            };
+
             video.defaultMuted = true;
             video.muted = true;
+            video.autoplay = true;
+            video.loop = true;
+            video.playsInline = true;
+            video.setAttribute('muted', '');
+            video.setAttribute('autoplay', '');
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', 'true');
 
             if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
                 hideFallback();
+                tryPlayPreview();
             }
 
             video.addEventListener('loadeddata', hideFallback);
+            video.addEventListener('loadedmetadata', tryPlayPreview);
             video.addEventListener('canplay', () => {
                 hideFallback();
-                video.play().catch(() => {
-                    // Keep poster/fallback image visible if autoplay is blocked.
-                    showFallback();
-                });
+                tryPlayPreview();
             });
+            video.addEventListener('playing', hideFallback);
             video.addEventListener('error', showFallback);
-            video.addEventListener('stalled', showFallback);
+            video.addEventListener('suspend', () => {
+                if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                    hideFallback();
+                }
+            });
+
+            const visibilityObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting) {
+                        video.pause();
+                        return;
+                    }
+
+                    tryPlayPreview();
+                });
+            }, { threshold: 0.35 });
+
+            visibilityObserver.observe(video);
         });
 
         document.querySelectorAll<HTMLElement>('.rank-item').forEach(item => {
