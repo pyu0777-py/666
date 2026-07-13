@@ -6,6 +6,9 @@ type MainProjectCard = {
     folderName: string;
     coverSrc: string;
     images: string[];
+    videos: string[];
+    previewVideoSrc?: string;
+    previewVideoMime?: string;
     imageCount: number;
     sortTime: number;
 };
@@ -24,9 +27,17 @@ const cesProjectsRoot = path.join(publicRoot, '2c', '7x');
 const otherProjectsRoot = path.join(publicRoot, '2c', '8q');
 const waterfallRoot = path.join(publicRoot, '2c', '1p');
 const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
+const videoExtensions = new Set(['.mp4', '.webm', '.mov']);
 
 function toPublicUrl(absolutePath: string) {
     return encodeURI('/' + path.relative(publicRoot, absolutePath).split(path.sep).join('/'));
+}
+
+function getVideoMimeType(fileName: string) {
+    const ext = path.extname(fileName).toLowerCase();
+    if (ext === '.webm') return 'video/webm';
+    if (ext === '.mov') return 'video/quicktime';
+    return 'video/mp4';
 }
 
 async function loadProjectCards(rootPath: string): Promise<MainProjectCard[]> {
@@ -54,10 +65,12 @@ async function loadProjectCards(rootPath: string): Promise<MainProjectCard[]> {
             if (!entry.isDirectory()) continue;
             const folderPath = path.join(rootPath, entry.name);
             const childEntries = await fs.readdir(folderPath, { withFileTypes: true });
-            const hasImageFiles = childEntries.some(
-                (child) => child.isFile() && imageExtensions.has(path.extname(child.name).toLowerCase())
+            const hasSupportedMediaFiles = childEntries.some(
+                (child) =>
+                    child.isFile() &&
+                    (imageExtensions.has(path.extname(child.name).toLowerCase()) || videoExtensions.has(path.extname(child.name).toLowerCase()))
             );
-            if (!hasImageFiles) continue;
+            if (!hasSupportedMediaFiles) continue;
             projectFolders.push({
                 folderName: entry.name,
                 folderPath,
@@ -66,24 +79,39 @@ async function loadProjectCards(rootPath: string): Promise<MainProjectCard[]> {
     }
 
     const projectCards = await Promise.all(
-        projectFolders.map(async ({ folderName, folderPath }) => {
+        projectFolders.map(async ({ folderName, folderPath }): Promise<MainProjectCard | null> => {
             const fileEntries = await fs.readdir(folderPath, { withFileTypes: true });
-            const images = fileEntries
+            const fileNames = fileEntries
                 .filter((entry) => entry.isFile())
                 .map((entry) => entry.name)
-                .filter((fileName) => imageExtensions.has(path.extname(fileName).toLowerCase()))
                 .sort((left, right) => left.localeCompare(right, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }))
+            const images = fileNames
+                .filter((fileName) => imageExtensions.has(path.extname(fileName).toLowerCase()))
                 .map((fileName) => toPublicUrl(path.join(folderPath, fileName)));
+            const videoFileNames = fileNames.filter((fileName) => videoExtensions.has(path.extname(fileName).toLowerCase()));
+            const videos = videoFileNames.map((fileName) => toPublicUrl(path.join(folderPath, fileName)));
+            const previewVideoFileName = videoFileNames[0];
+            const previewVideoSrc = previewVideoFileName ? toPublicUrl(path.join(folderPath, previewVideoFileName)) : undefined;
+            const previewVideoMime = previewVideoFileName ? getVideoMimeType(previewVideoFileName) : undefined;
+            const coverSrc = images[0] ?? previewVideoSrc;
 
-            if (!images.length) return null;
+            if (!coverSrc) return null;
 
-            return {
+            const card: MainProjectCard = {
                 folderName,
-                coverSrc: images[0],
+                coverSrc,
                 images,
+                videos,
                 imageCount: images.length,
                 sortTime: (await fs.stat(folderPath)).mtimeMs,
-            } satisfies MainProjectCard;
+            };
+
+            if (previewVideoSrc) {
+                card.previewVideoSrc = previewVideoSrc;
+                card.previewVideoMime = previewVideoMime;
+            }
+
+            return card;
         })
     );
 
@@ -292,7 +320,12 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
         .project-card:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 15px 30px rgba(0,0,0,0.15); }
         .project-thumb { height: 200px; background: #eee; overflow: hidden; position: relative; }
         .project-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .project-card:hover .project-thumb img { transform: scale(1.08); }
+        .project-thumb video { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .project-thumb .video-fallback-image { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+        .project-thumb.video-error video { opacity: 0; }
+        .project-thumb.video-error .video-fallback-image { opacity: 1; }
+        .project-card:hover .project-thumb img,
+        .project-card:hover .project-thumb video { transform: scale(1.08); }
         .project-info { padding: 20px; }
         .project-info h4 { font-size: 1.1rem; margin-bottom: 8px; }
         .project-info span { font-size: 0.85rem; color: #888; }
@@ -351,7 +384,10 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
         }
         .lightbox-scroll-area { overflow-y: auto; padding: 0; background: #fff; }
         .lightbox-gallery { display: flex; flex-direction: column; gap: 0; }
-        .lightbox-gallery img { width: 100%; max-height: 72vh; height: auto; object-fit: contain; display: block; background: #f3f3f3; border-radius: 0; cursor: zoom-out; }
+        .lightbox-gallery img,
+        .lightbox-gallery video { width: 100%; max-height: 72vh; height: auto; object-fit: contain; display: block; background: #f3f3f3; border-radius: 0; }
+        .lightbox-gallery img { cursor: zoom-out; }
+        .lightbox-gallery video { background: #000; }
         .lightbox-close, .lightbox-nav {
             position: absolute; top: 16px; background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 50%; width: 42px; height: 42px; cursor: pointer; font-size: 1.1rem; z-index: 2;
         }
@@ -413,6 +449,7 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
             #works .project-thumb { flex: 1 1 auto; min-height: 0; }
             #works .project-thumb, #works .project-gallery-preview .main-preview { aspect-ratio: auto; height: auto; }
             #works .project-thumb img { height: 100%; object-fit: cover; }
+            #works .project-thumb video { height: 100%; object-fit: cover; }
             .project-gallery { padding: 0 8px 8px; }
             .project-info { padding: 8px; }
             .project-info h4 { font-size: 0.86rem; margin-bottom: 4px; line-height: 1.2; }
@@ -738,66 +775,118 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
                 <button class="scroll-btn prev" aria-label="上一页">‹</button>
                 <div class="massive-grid" id="workGrid">
                 {mainProjectCards.map((card) => (
-                    <div class="project-card" data-type="main" data-source="directory" data-images={JSON.stringify(card.images)}>
-                        <div class="project-thumb"><img src={card.coverSrc} alt={`${card.folderName} 封面图`}></div>
+                    <div class="project-card" data-type="main" data-source="directory" data-images={JSON.stringify(card.images)} data-videos={JSON.stringify(card.videos)}>
+                        <div class="project-thumb">
+                            {card.previewVideoSrc ? (
+                                <>
+                                    <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster={card.images[0] || undefined} aria-label={`${card.folderName} 主图视频预览`}>
+                                        <source src={card.previewVideoSrc} type={card.previewVideoMime || 'video/mp4'} />
+                                    </video>
+                                    {card.images[0] && <img class="video-fallback-image" src={card.images[0]} alt={`${card.folderName} 封面图`} loading="lazy" decoding="async" />}
+                                </>
+                            ) : (
+                                <img src={card.coverSrc} alt={`${card.folderName} 封面图`} />
+                            )}
+                        </div>
                         <div class="project-info"><h4>{card.folderName}</h4><span>亚马逊主图 / {card.imageCount} 张素材</span><div class="gallery-hint">点击查看更多</div></div>
                         <div class="project-gallery"></div>
                     </div>
                 ))}
                 {aplusProjectCards.map((card) => (
-                    <div class="project-card" data-type="aplus" data-source="directory" data-images={JSON.stringify(card.images)}>
+                    <div class="project-card" data-type="aplus" data-source="directory" data-images={JSON.stringify(card.images)} data-videos={JSON.stringify(card.videos)}>
                         <div class="project-thumb"><img src={card.coverSrc} alt={`${card.folderName} 封面图`}></div>
                         <div class="project-info"><h4>{card.folderName}</h4><span>旗舰店/官网 / {card.imageCount} 张素材</span><div class="gallery-hint">点击查看更多</div></div>
                         <div class="project-gallery"></div>
                     </div>
                 ))}
-                <div class="project-card" data-type="video" data-images='["https://images.unsplash.com/photo-1495707902641-75cac588d2e9?auto=format&fit=crop&w=600&q=80","https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/9b59b6/fff?text=TikTok+Video" alt="社媒视频"></div>
+                <div class="project-card" data-type="video" data-videos='["https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4","https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm"]' data-images='["https://images.unsplash.com/photo-1495707902641-75cac588d2e9?auto=format&fit=crop&w=600&q=80","https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"]'>
+                    <div class="project-thumb">
+                        <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster="https://images.unsplash.com/photo-1495707902641-75cac588d2e9?auto=format&fit=crop&w=600&q=80" aria-label="户外储能 TikTok 社媒视频预览">
+                            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4" />
+                        </video>
+                        <img class="video-fallback-image" src="https://images.unsplash.com/photo-1495707902641-75cac588d2e9?auto=format&fit=crop&w=600&q=80" alt="社媒视频封面" loading="lazy" decoding="async" />
+                    </div>
                     <div class="project-info"><h4>户外储能 - TikTok 爆款</h4><span>社媒视频 / 播放 50W+</span><div class="gallery-hint">点击查看更多</div></div>
                     <div class="project-gallery"></div>
                 </div>
                 <!-- 额外社媒/视频内容（新增 5 条） -->
-                <div class="project-card" data-type="video" data-images='["https://placehold.co/400x300/9b59b6/fff?text=Video+1"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/9b59b6/fff?text=Video+1" alt="视频1"></div>
+                <div class="project-card" data-type="video" data-videos='["https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4","https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm"]' data-images='["https://placehold.co/400x300/9b59b6/fff?text=Video+1"]'>
+                    <div class="project-thumb">
+                        <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster="https://placehold.co/400x300/9b59b6/fff?text=Video+1" aria-label="产品拆箱短视频预览">
+                            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4" />
+                        </video>
+                        <img class="video-fallback-image" src="https://placehold.co/400x300/9b59b6/fff?text=Video+1" alt="视频1" loading="lazy" decoding="async" />
+                    </div>
                     <div class="project-info"><h4>产品拆箱 - 短视频系列</h4><span>社媒/视频 / 短视频</span><div class="gallery-hint">点击查看更多</div></div>
                     <div class="project-gallery"></div>
                 </div>
-                <div class="project-card" data-type="video" data-images='["https://placehold.co/400x300/a569bd/fff?text=Video+2"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/a569bd/fff?text=Video+2" alt="视频2"></div>
+                <div class="project-card" data-type="video" data-videos='["https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"]' data-images='["https://placehold.co/400x300/a569bd/fff?text=Video+2"]'>
+                    <div class="project-thumb">
+                        <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster="https://placehold.co/400x300/a569bd/fff?text=Video+2" aria-label="使用演示视频预览">
+                            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4" />
+                        </video>
+                        <img class="video-fallback-image" src="https://placehold.co/400x300/a569bd/fff?text=Video+2" alt="视频2" loading="lazy" decoding="async" />
+                    </div>
                     <div class="project-info"><h4>使用演示 - 快速教程</h4><span>社媒/视频 / 教程</span><div class="gallery-hint">点击查看更多</div></div>
                     <div class="project-gallery"></div>
                 </div>
-                <div class="project-card" data-type="video" data-images='["https://placehold.co/400x300/b784c9/fff?text=Video+3"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/b784c9/fff?text=Video+3" alt="视频3"></div>
+                <div class="project-card" data-type="video" data-videos='["https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm","https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"]' data-images='["https://placehold.co/400x300/b784c9/fff?text=Video+3"]'>
+                    <div class="project-thumb">
+                        <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster="https://placehold.co/400x300/b784c9/fff?text=Video+3" aria-label="测评合集视频预览">
+                            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm" type="video/webm" />
+                        </video>
+                        <img class="video-fallback-image" src="https://placehold.co/400x300/b784c9/fff?text=Video+3" alt="视频3" loading="lazy" decoding="async" />
+                    </div>
                     <div class="project-info"><h4>测评合集 - 深度评测</h4><span>社媒/视频 / 测评</span><div class="gallery-hint">点击查看更多</div></div>
                     <div class="project-gallery"></div>
                 </div>
-                <div class="project-card" data-type="video" data-images='["https://placehold.co/400x300/c59fd6/fff?text=Video+4"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/c59fd6/fff?text=Video+4" alt="视频4"></div>
+                <div class="project-card" data-type="video" data-videos='["https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"]' data-images='["https://placehold.co/400x300/c59fd6/fff?text=Video+4"]'>
+                    <div class="project-thumb">
+                        <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster="https://placehold.co/400x300/c59fd6/fff?text=Video+4" aria-label="品牌故事短片预览">
+                            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4" />
+                        </video>
+                        <img class="video-fallback-image" src="https://placehold.co/400x300/c59fd6/fff?text=Video+4" alt="视频4" loading="lazy" decoding="async" />
+                    </div>
                     <div class="project-info"><h4>创意短片 - 品牌故事</h4><span>社媒/视频 / 品牌短片</span><div class="gallery-hint">点击查看更多</div></div>
                     <div class="project-gallery"></div>
                 </div>
-                <div class="project-card" data-type="video" data-images='["https://placehold.co/400x300/d3b0e3/fff?text=Video+5"]'>
-                    <div class="project-thumb"><img src="https://placehold.co/400x300/d3b0e3/fff?text=Video+5" alt="视频5"></div>
+                <div class="project-card" data-type="video" data-videos='["https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm"]' data-images='["https://placehold.co/400x300/d3b0e3/fff?text=Video+5"]'>
+                    <div class="project-thumb">
+                        <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster="https://placehold.co/400x300/d3b0e3/fff?text=Video+5" aria-label="广告短片预览">
+                            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm" type="video/webm" />
+                        </video>
+                        <img class="video-fallback-image" src="https://placehold.co/400x300/d3b0e3/fff?text=Video+5" alt="视频5" loading="lazy" decoding="async" />
+                    </div>
                     <div class="project-info"><h4>广告短片 - 转化优化</h4><span>社媒/视频 / 广告</span><div class="gallery-hint">点击查看更多</div></div>
                     <div class="project-gallery"></div>
                 </div>
                 {packagingProjectCards.map((card) => (
-                    <div class="project-card" data-type="packaging" data-source="directory" data-images={JSON.stringify(card.images)}>
-                        <div class="project-thumb"><img src={card.coverSrc} alt={`${card.folderName} 封面图`}></div>
+                    <div class="project-card" data-type="packaging" data-source="directory" data-images={JSON.stringify(card.images)} data-videos={JSON.stringify(card.videos)}>
+                        <div class="project-thumb">
+                            {card.previewVideoSrc ? (
+                                <>
+                                    <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster={card.images[0] || undefined} aria-label={`${card.folderName} 包装配色视频预览`}>
+                                        <source src={card.previewVideoSrc} type={card.previewVideoMime || 'video/mp4'} />
+                                    </video>
+                                    {card.images[0] && <img class="video-fallback-image" src={card.images[0]} alt={`${card.folderName} 封面图`} loading="lazy" decoding="async" />}
+                                </>
+                            ) : (
+                                <img src={card.coverSrc} alt={`${card.folderName} 封面图`}>
+                            )}
+                        </div>
                         <div class="project-info"><h4>{card.folderName}</h4><span>包装/配色 / {card.imageCount} 张素材</span><div class="gallery-hint">点击查看更多</div></div>
                         <div class="project-gallery"></div>
                     </div>
                 ))}
                 {cesProjectCards.map((card) => (
-                    <div class="project-card" data-type="ces" data-source="directory" data-images={JSON.stringify(card.images)}>
+                    <div class="project-card" data-type="ces" data-source="directory" data-images={JSON.stringify(card.images)} data-videos={JSON.stringify(card.videos)}>
                         <div class="project-thumb"><img src={card.coverSrc} alt={`${card.folderName} 封面图`}></div>
                         <div class="project-info"><h4>{card.folderName}</h4><span>CES/线下 / {card.imageCount} 张素材</span><div class="gallery-hint">点击查看更多</div></div>
                         <div class="project-gallery"></div>
                     </div>
                 ))}
                 {otherProjectCards.map((card) => (
-                    <div class="project-card" data-type="other" data-source="directory" data-images={JSON.stringify(card.images)}>
+                    <div class="project-card" data-type="other" data-source="directory" data-images={JSON.stringify(card.images)} data-videos={JSON.stringify(card.videos)}>
                         <div class="project-thumb"><img src={card.coverSrc} alt={`${card.folderName} 封面图`}></div>
                         <div class="project-info"><h4>{card.folderName}</h4><span>其他 / {card.imageCount} 张素材</span><div class="gallery-hint">点击查看更多</div></div>
                         <div class="project-gallery"></div>
@@ -1148,52 +1237,109 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
         const lightboxPrev = document.getElementById('lightboxPrev');
         const lightboxNext = document.getElementById('lightboxNext');
         const methodChart = document.getElementById('methodChart');
-        let currentLightboxImages: string[] = [];
+        type LightboxMediaItem = {
+            type: 'image' | 'video';
+            src: string;
+        };
+
+        let currentLightboxMedia: LightboxMediaItem[] = [];
         let currentLightboxIndex = 0;
         let previousBodyOverflow = '';
 
-        function openLightbox(images: string[], index = 0) {
+        function getMediaMimeType(src: string) {
+            const cleanSrc = src.split('?')[0].toLowerCase();
+            if (cleanSrc.endsWith('.webm')) return 'video/webm';
+            if (cleanSrc.endsWith('.mov')) return 'video/quicktime';
+            return 'video/mp4';
+        }
+
+        function syncLightboxVideoPlayback() {
+            if (!lightboxGallery || !currentLightboxMedia.length) return;
+
+            const mediaNodes = lightboxGallery.querySelectorAll<HTMLElement>('[data-lightbox-item]');
+            mediaNodes.forEach((node, nodeIndex) => {
+                if (!(node instanceof HTMLVideoElement)) return;
+
+                if (nodeIndex !== currentLightboxIndex) {
+                    node.pause();
+                    return;
+                }
+
+                node.defaultMuted = true;
+                node.muted = true;
+                node.playsInline = true;
+                node.load();
+                node.play().catch(() => {
+                    // User can still press the play button in controls if autoplay is blocked.
+                });
+            });
+        }
+
+        function openLightbox(media: LightboxMediaItem[], index = 0) {
             if (!overlay || !lightboxGallery || !lightboxCaption) return;
-            currentLightboxImages = images;
+            currentLightboxMedia = media;
             currentLightboxIndex = index;
-            lightboxGallery.innerHTML = images.map((src, imageIndex) => `
-                <img src="${src}" alt="作品图 ${imageIndex + 1}" loading="lazy">
+            lightboxGallery.innerHTML = media.map((item, mediaIndex) => `
+                ${item.type === 'video'
+                    ? `<video data-lightbox-item controls autoplay loop muted playsinline preload="metadata"><source src="${item.src}" type="${getMediaMimeType(item.src)}" /></video>`
+                    : `<img data-lightbox-item src="${item.src}" alt="作品图 ${mediaIndex + 1}" loading="lazy">`
+                }
             `).join('');
             const scrollArea = lightboxGallery.parentElement as HTMLElement | null;
-            lightboxCaption.textContent = images.length > 1 ? `共 ${images.length} 张，向下滚动查看` : '作品大图';
+            lightboxCaption.textContent = media.length > 1 ? `共 ${media.length} 项，向下滚动查看` : (media[0]?.type === 'video' ? '作品视频' : '作品大图');
             overlay.classList.add('active');
             previousBodyOverflow = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
             requestAnimationFrame(() => {
-                const targetImage = lightboxGallery.querySelectorAll<HTMLImageElement>('img')[currentLightboxIndex];
-                targetImage?.scrollIntoView({ behavior: 'auto', block: 'start' });
+                const targetMedia = lightboxGallery.querySelectorAll<HTMLElement>('[data-lightbox-item]')[currentLightboxIndex];
+                targetMedia?.scrollIntoView({ behavior: 'auto', block: 'start' });
                 if (scrollArea) scrollArea.scrollTop = 0;
+                syncLightboxVideoPlayback();
             });
+        }
+
+        function openLightboxImages(images: string[], index = 0) {
+            openLightbox(images.map((src) => ({ type: 'image', src })), index);
         }
 
         function closeLightbox() {
             if (overlay) overlay.classList.remove('active');
+            lightboxGallery?.querySelectorAll('video').forEach((video) => {
+                if (video instanceof HTMLVideoElement) {
+                    video.pause();
+                }
+            });
             document.body.style.overflow = previousBodyOverflow;
         }
 
         function openMethodologyLightbox() {
             const imageSrc = methodChart?.getAttribute('data-image') || '/1shouye/2suo.png';
-            if (overlay?.classList.contains('active') && currentLightboxImages.length === 1 && currentLightboxImages[0] === imageSrc) {
+            if (
+                overlay?.classList.contains('active') &&
+                currentLightboxMedia.length === 1 &&
+                currentLightboxMedia[0].type === 'image' &&
+                currentLightboxMedia[0].src === imageSrc
+            ) {
                 closeLightbox();
                 return;
             }
-            openLightbox([imageSrc], 0);
+            openLightboxImages([imageSrc], 0);
         }
 
         function showLightboxImage(index: number) {
-            if (!lightboxGallery || !lightboxCaption || !currentLightboxImages.length) return;
-            currentLightboxIndex = (index + currentLightboxImages.length) % currentLightboxImages.length;
-            const targetImage = lightboxGallery.querySelectorAll<HTMLImageElement>('img')[currentLightboxIndex];
-            targetImage?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            lightboxCaption.textContent = currentLightboxImages.length > 1 ? `作品图 ${currentLightboxIndex + 1}/${currentLightboxImages.length}` : '作品大图';
+            if (!lightboxGallery || !lightboxCaption || !currentLightboxMedia.length) return;
+            currentLightboxIndex = (index + currentLightboxMedia.length) % currentLightboxMedia.length;
+            const targetMedia = lightboxGallery.querySelectorAll<HTMLElement>('[data-lightbox-item]')[currentLightboxIndex];
+            targetMedia?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (currentLightboxMedia.length > 1) {
+                lightboxCaption.textContent = `作品 ${currentLightboxIndex + 1}/${currentLightboxMedia.length}`;
+            } else {
+                lightboxCaption.textContent = currentLightboxMedia[0].type === 'video' ? '作品视频' : '作品大图';
+            }
+            syncLightboxVideoPlayback();
         }
 
-        function getProjectGalleryImages(card: HTMLElement) {
+        function getProjectLightboxMedia(card: HTMLElement): LightboxMediaItem[] {
             const baseImages = [
                 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
                 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=600&q=80',
@@ -1201,17 +1347,107 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
                 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80'
             ];
             const customImages = JSON.parse(card.dataset.images || '[]') as string[];
+            const customVideos = JSON.parse(card.dataset.videos || '[]') as string[];
+            const isDirectoryCard = card.dataset.source === 'directory';
+            if (isDirectoryCard && !customImages.length && !customVideos.length) {
+                return [];
+            }
+
+            const media: LightboxMediaItem[] = [];
+            if (customVideos.length) {
+                media.push(...customVideos.map((src) => ({ type: 'video' as const, src })));
+            }
+            if (customImages.length) {
+                media.push(...customImages.map((src) => ({ type: 'image' as const, src })));
+            }
+            if (media.length) {
+                return media;
+            }
+
             const sourceImages = customImages.length ? customImages : baseImages;
-            return Array.from({ length: sourceImages.length }, (_, index) => sourceImages[index]);
+            return Array.from({ length: sourceImages.length }, (_, index) => ({ type: 'image' as const, src: sourceImages[index] }));
         }
+
+        function ensureMainCardsSupportVideos() {
+            const defaultMainVideos = [
+                'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+                'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm'
+            ];
+
+            document.querySelectorAll<HTMLElement>('.project-card[data-type="main"]').forEach((card) => {
+                if (card.dataset.source === 'directory') return;
+
+                let customVideos: string[] = [];
+                try {
+                    customVideos = JSON.parse(card.dataset.videos || '[]') as string[];
+                } catch {
+                    customVideos = [];
+                }
+
+                if (!customVideos.length) {
+                    customVideos = defaultMainVideos;
+                    card.dataset.videos = JSON.stringify(customVideos);
+                }
+
+                const thumb = card.querySelector<HTMLElement>('.project-thumb');
+                if (!thumb || thumb.querySelector('.project-preview-video')) return;
+
+                const coverImg = thumb.querySelector<HTMLImageElement>('img');
+                if (!coverImg) return;
+
+                const posterSrc = coverImg.getAttribute('src') || '';
+                const videoSrc = customVideos[0];
+                if (!videoSrc) return;
+
+                thumb.innerHTML = `
+                    <video class="project-preview-video" autoplay muted loop playsinline preload="metadata" poster="${posterSrc}" aria-label="主图视频预览">
+                        <source src="${videoSrc}" type="${getMediaMimeType(videoSrc)}" />
+                    </video>
+                    ${posterSrc ? `<img class="video-fallback-image" src="${posterSrc}" alt="${coverImg.alt || '主图封面'}" loading="lazy" decoding="async" />` : ''}
+                `;
+            });
+        }
+
+        ensureMainCardsSupportVideos();
 
         document.querySelectorAll<HTMLElement>('.project-card').forEach(card => {
             card.addEventListener('click', () => {
-                const images = getProjectGalleryImages(card);
-                if (images.length) {
-                    openLightbox(images, 0);
+                const media = getProjectLightboxMedia(card);
+                if (media.length) {
+                    openLightbox(media, 0);
                 }
             });
+        });
+
+        document.querySelectorAll<HTMLVideoElement>('.project-preview-video').forEach(video => {
+            const thumb = video.closest<HTMLElement>('.project-thumb');
+            if (!thumb) return;
+
+            const showFallback = () => {
+                thumb.classList.add('video-error');
+            };
+
+            const hideFallback = () => {
+                thumb.classList.remove('video-error');
+            };
+
+            video.defaultMuted = true;
+            video.muted = true;
+
+            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                hideFallback();
+            }
+
+            video.addEventListener('loadeddata', hideFallback);
+            video.addEventListener('canplay', () => {
+                hideFallback();
+                video.play().catch(() => {
+                    // Keep poster/fallback image visible if autoplay is blocked.
+                    showFallback();
+                });
+            });
+            video.addEventListener('error', showFallback);
+            video.addEventListener('stalled', showFallback);
         });
 
         document.querySelectorAll<HTMLElement>('.rank-item').forEach(item => {
@@ -1238,7 +1474,7 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
                         gallery.querySelectorAll<HTMLImageElement>('img').forEach((img, index) => {
                             img.addEventListener('click', (event) => {
                                 event.stopPropagation();
-                                openLightbox(displayImages, index);
+                                openLightboxImages(displayImages, index);
                             });
                         });
                     }
@@ -1248,7 +1484,7 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
 
         if (chartPreview) {
             chartPreview.addEventListener('click', () => {
-                openLightbox([
+                openLightboxImages([
                     'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1400&q=80'
                 ], 0);
             });
@@ -1258,7 +1494,7 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
 
         lightboxGallery?.addEventListener('click', (event) => {
             const target = event.target;
-            if (target instanceof HTMLImageElement && currentLightboxImages.length === 1) {
+            if (target instanceof HTMLImageElement && currentLightboxMedia.length === 1) {
                 closeLightbox();
             }
         });
