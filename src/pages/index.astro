@@ -528,8 +528,8 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
             #works .project-thumb, #works .project-gallery-preview .main-preview { aspect-ratio: auto; height: auto; }
             #works .project-thumb img { height: 100%; object-fit: cover; }
             #works .project-thumb video { height: 100%; object-fit: cover; }
-            #works .massive-grid.mobile-main-scroll .project-thumb { aspect-ratio: 1 / 1; }
-            #works .massive-grid.mobile-main-scroll > .project-card { aspect-ratio: 1 / 1; }
+            #works .massive-grid.mobile-main-scroll .project-thumb { aspect-ratio: 2 / 1; }
+            #works .massive-grid.mobile-main-scroll > .project-card { aspect-ratio: 4 / 5; }
             .project-gallery { padding: 0 8px 8px; }
             .project-info { padding: 8px; }
             .project-info h4 { font-size: 0.86rem; margin-bottom: 4px; line-height: 1.2; }
@@ -709,12 +709,13 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
                 display: flex;
                 flex-direction: column;
                 scroll-snap-align: start;
-                aspect-ratio: 1 / 1;
+                aspect-ratio: 4 / 5;
                 overflow: hidden;
             }
             .massive-grid.mobile-main-scroll .project-thumb {
                 height: auto;
-                aspect-ratio: 1 / 1;
+                aspect-ratio: 2 / 1;
+                flex: 0 0 auto;
             }
             .massive-grid.mobile-main-scroll .project-thumb img,
             .massive-grid.mobile-main-scroll .project-thumb video {
@@ -724,15 +725,25 @@ const waterfallImages = await loadWaterfallImages(waterfallRoot);
             .massive-grid.mobile-main-scroll .project-info {
                 padding: 8px;
                 min-height: 0;
+                overflow: hidden;
+                flex: 1 1 auto;
             }
             .massive-grid.mobile-main-scroll .project-info h4 {
                 font-size: 0.82rem;
                 line-height: 1.2;
                 margin-bottom: 4px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
             }
             .massive-grid.mobile-main-scroll .project-info span,
             .massive-grid.mobile-main-scroll .project-card .gallery-hint {
                 font-size: 0.62rem;
+                display: block;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .work-pagination { display: none !important; }
         }
